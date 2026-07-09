@@ -124,6 +124,26 @@ WebMCP and MPP are exercised at runtime: load the page and confirm
 `navigator.modelContext` is populated; call a payable operation and confirm a
 `402`/payment-required negotiation.
 
+### WordPress deployment
+
+WordPress routes all requests through `index.php`, so you cannot serve
+`/.well-known/*`, `/auth.md`, or `/openapi.json` by uploading static files —
+they need server-side code. `references/wordpress-agent-discovery.php` is a
+domain-agnostic mu-plugin that serves every endpoint above (correct
+content-types, CORS, runtime-computed `sha256`) by hooking `init` early and
+emitting the document before WordPress renders a 404. Drop it into
+`wp-content/mu-plugins/` and it activates automatically. It derives all URLs
+from `home_url()`, so there is nothing to edit.
+
+Note: application-password (Basic auth) REST deploys fail on hosts that strip
+the `Authorization` header — the tell is `rest_not_logged_in` even for a wrong
+password. Fix header passthrough in `.htaccess` before automating REST deploys:
+
+```apache
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%1]
+```
+
 ## Examples
 
 - **"API Catalog not found" on a scan** → copy `references/api-catalog.json`,
