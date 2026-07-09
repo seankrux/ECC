@@ -1,0 +1,16 @@
+{
+  "serverInfo": {
+    "name": "example-mcp",
+    "version": "1.0.0",
+    "description": "MCP server exposing Example's tools and resources to agents."
+  },
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "https://mcp.example.com/mcp"
+  },
+  "capabilities": {
+    "tools": { "listChanged": true },
+    "resources": { "subscribe": true, "listChanged": true },
+    "prompts": { "listChanged": false }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://example.com/api",
+      "service-desc": [
+        {
+          "href": "https://example.com/openapi.json",
+          "type": "application/vnd.oai.openapi+json"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://example.com/docs",
+          "type": "text/html"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://example.com/api/health",
+          "type": "application/json"
+        }
+      ]
+    }
+  ]
+}

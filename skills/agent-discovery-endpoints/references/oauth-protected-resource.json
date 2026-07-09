@@ -1,0 +1,14 @@
+{
+  "resource": "https://example.com/api",
+  "authorization_servers": [
+    "https://auth.example.com"
+  ],
+  "scopes_supported": [
+    "catalog.read",
+    "orders.write"
+  ],
+  "bearer_methods_supported": [
+    "header"
+  ],
+  "resource_documentation": "https://example.com/auth.md"
+}
