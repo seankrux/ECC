@@ -1,0 +1,351 @@
+<title>WP x MCP — PIN Lock Walkthrough</title>
+<style>
+  :root{
+    /* theme-aware explainer chrome */
+    --bg:#eef1f4; --ink:#1a2233; --ink-soft:#55617a; --muted:#8791a5;
+    --card:#ffffff; --line:#dce1e9; --rail:#f5f7fa;
+    --accent:#2271b1; --accent-2:#135e96;
+    --ok:#00844a; --ok-bg:#e6f4ea; --warn:#9a6700; --warn-bg:#fbf3da; --err:#b3261e; --err-bg:#fbe7e6;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    /* authentic wp-admin (kept constant — this is how it really renders) */
+    --wp-bg:#f0f0f1; --wp-panel:#fff; --wp-ink:#1d2327; --wp-line:#c3c4c7; --wp-blue:#2271b1; --wp-blue-d:#135e96;
+    --wp-menu:#1d2327; --wp-menu-ink:#c3c4c7; --wp-menu-active:#2271b1;
+    --wp-ok:#00a32a; --wp-err:#d63638; --wp-warn:#dba617;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0e1320; --ink:#e8ecf4; --ink-soft:#a9b4c9; --muted:#6f7b93;
+      --card:#151b2b; --line:#26304390; --rail:#111725; --accent:#5b9bd5; --accent-2:#7fb2e0; }
+  }
+  :root[data-theme="dark"]{ --bg:#0e1320; --ink:#e8ecf4; --ink-soft:#a9b4c9; --muted:#6f7b93;
+    --card:#151b2b; --line:#26304390; --rail:#111725; --accent:#5b9bd5; --accent-2:#7fb2e0; }
+  :root[data-theme="light"]{ --bg:#eef1f4; --ink:#1a2233; --ink-soft:#55617a; --muted:#8791a5;
+    --card:#ffffff; --line:#dce1e9; --rail:#f5f7fa; --accent:#2271b1; --accent-2:#135e96; }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .page{max-width:1160px;margin:0 auto;padding:28px 20px 64px}
+  h1,h2,h3{margin:0;text-wrap:balance}
+  code{font-family:var(--mono)}
+  .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;border-bottom:1px solid var(--line);padding-bottom:16px}
+  .eyebrow{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .head h1{font-size:1.6rem;letter-spacing:-.02em}
+  .head p{margin:0;color:var(--ink-soft);font-size:.92rem;flex-basis:100%;max-width:70ch}
+
+  /* step tracker */
+  .steps{display:flex;flex-wrap:wrap;gap:6px;margin:20px 0 18px}
+  .step{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted);padding:7px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card)}
+  .step b{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:var(--line);color:var(--ink-soft);font-size:.72rem;font-weight:700}
+  .step.on{color:var(--ink);border-color:var(--accent)}
+  .step.on b{background:var(--accent);color:#fff}
+  .step.done b{background:var(--ok);color:#fff}
+
+  .console{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;align-items:start}
+  @media (max-width:860px){ .console{grid-template-columns:1fr} }
+
+  /* wp-admin mock (intentionally light — faithful to real wp-admin) */
+  .wp{border:1px solid var(--wp-line);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px #0000001a;background:var(--wp-bg);color:var(--wp-ink);color-scheme:light}
+  .wp-bar{display:flex;align-items:center;gap:8px;background:#1d2327;color:#f0f0f1;padding:7px 12px;font-size:.78rem}
+  .wp-bar .dot{width:10px;height:10px;border-radius:50%;background:#3c434a}
+  .wp-bar .u{margin-left:auto;opacity:.8}
+  .wp-body{display:grid;grid-template-columns:150px 1fr;min-height:430px}
+  .wp-menu{background:var(--wp-menu);color:var(--wp-menu-ink);font-size:.8rem;padding:8px 0}
+  .wp-menu .mi{padding:9px 12px;display:flex;gap:8px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wp-menu .mi.active{background:var(--wp-menu-active);color:#fff;font-weight:600}
+  .wp-menu .mi.dim{opacity:.6}
+  .wp-main{background:var(--wp-bg);padding:20px 22px;overflow:auto}
+  .wp-main h2.title{font-size:1.35rem;font-weight:400;color:#1d2327;margin:0 0 12px}
+  .wp-main p{color:#3c434a;font-size:.86rem;margin:0 0 12px;max-width:56ch}
+  .wp-field{margin:0 0 12px;max-width:320px}
+  .wp-field label{display:block;font-size:.8rem;color:#1d2327;margin-bottom:4px}
+  .wp-input{width:100%;padding:8px 10px;border:1px solid #8c8f94;border-radius:4px;font-size:1rem;background:#fff;color:#1d2327;letter-spacing:2px}
+  .wp-input:focus{outline:2px solid #2271b1;outline-offset:-1px;border-color:#2271b1}
+  .wp-btn{background:var(--wp-blue);border:1px solid var(--wp-blue);color:#fff;padding:7px 14px;border-radius:4px;font-size:.86rem;cursor:pointer;font-family:inherit}
+  .wp-btn:hover{background:var(--wp-blue-d);border-color:var(--wp-blue-d)}
+  .wp-btn.sm{padding:3px 9px;font-size:.78rem}
+  .wp-btn.sec{background:#f6f7f7;color:#2271b1;border-color:#2271b1}
+  .wp-btn.danger{background:#f6f7f7;color:#b32d2e;border-color:#b32d2e}
+  .wp-btn:focus-visible{outline:2px solid #135e96;outline-offset:2px}
+  .wp-note{background:#fff;border-left:4px solid #72aee6;padding:9px 12px;font-size:.8rem;color:#3c434a;margin:12px 0;max-width:56ch}
+  .wp-notice{padding:9px 12px;border:1px solid;border-radius:4px;margin:0 0 14px;font-size:.84rem;max-width:56ch}
+  .wp-notice.ok{background:var(--wp-ok);border-color:#008a20;color:#fff}
+  .wp-notice.err{background:#fcf0f1;border-color:var(--wp-err);color:#8a1f21}
+  .statusbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#f6f7f7;border:1px solid #dcdcde;border-left:4px solid #2271b1;padding:8px 12px;margin:0 0 14px;font-size:.82rem}
+  .statusbar .grow{flex:1;color:#50575e;min-width:120px}
+  .keytable{width:100%;border-collapse:collapse;background:#fff;border:1px solid #c3c4c7;font-size:.8rem;margin:6px 0 4px}
+  .keytable th,.keytable td{text-align:left;padding:7px 9px;border-bottom:1px solid #e0e0e0}
+  .keytable th{background:#f6f7f7;font-weight:600}
+  .manage{background:#fff;border:1px solid #dcdcde;padding:12px 14px;margin:0 0 14px;display:none;gap:26px;flex-wrap:wrap}
+  .manage.open{display:flex}
+  .manage form{min-width:210px;flex:1}
+  .manage h3{font-size:.92rem;margin:0 0 8px}
+  .manage .wp-input{letter-spacing:1px;margin-bottom:7px}
+  .lockwrap{max-width:340px}
+  .lock-emoji{font-size:2.2rem;line-height:1}
+  .dim{color:#787c82;font-size:.78rem}
+
+  /* right rail */
+  .rail{display:flex;flex-direction:column;gap:14px;position:sticky;top:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card h3{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:700}
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--rail)}
+  .chip .k{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .chip .v{font-weight:700;font-size:.95rem;margin-top:2px;font-variant-numeric:tabular-nums}
+  .v.good{color:var(--ok)} .v.bad{color:var(--err)} .v.warn{color:var(--warn)}
+  .log{font-family:var(--mono);font-size:.74rem;line-height:1.55;max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+  .logline{padding:8px 10px;border-radius:7px;background:var(--rail);border-left:3px solid var(--line)}
+  .logline .act{color:var(--ink);font-weight:600;font-family:var(--sans);font-size:.78rem;margin-bottom:3px}
+  .logline code{color:var(--accent-2);word-break:break-word}
+  .logline.ok{border-left-color:var(--ok)} .logline.err{border-left-color:var(--err)} .logline.warn{border-left-color:var(--warn)}
+  .facts{font-size:.8rem;color:var(--ink-soft);display:flex;flex-direction:column;gap:7px}
+  .facts b{color:var(--ink)}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .ghost{background:none;border:1px solid var(--line);color:var(--ink-soft);padding:6px 12px;border-radius:7px;font-size:.8rem;cursor:pointer;font-family:inherit}
+  .ghost:hover{border-color:var(--accent);color:var(--ink)}
+  .demoflag{font-size:.72rem;color:var(--muted);margin-top:2px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+  <div class="head">
+    <span class="eyebrow">WP&nbsp;x&nbsp;MCP v1.21.1 · Admin PIN lock</span>
+    <h1>How the PIN lock works</h1>
+    <p>A working replica of the gate I added. Click through it exactly as you would in <code>wp-admin → WP x MCP</code>. The right rail shows the real server-side effect of every action — the same <code>password_hash</code>, transients, and nonce checks that run in the plugin.</p>
+  </div>
+
+  <div class="steps" id="steps">
+    <div class="step" data-s="setup"><b>1</b> Set a PIN</div>
+    <div class="step" data-s="locked"><b>2</b> Locked screen</div>
+    <div class="step" data-s="unlock"><b>3</b> Enter PIN</div>
+    <div class="step" data-s="manage"><b>4</b> Unlocked &amp; manage</div>
+  </div>
+
+  <div class="console">
+    <!-- LEFT: live wp-admin mock -->
+    <div class="wp" aria-live="polite">
+      <div class="wp-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span>yoursite.com/wp-admin</span><span class="u">👤 admin</span></div>
+      <div class="wp-body">
+        <nav class="wp-menu" aria-hidden="true">
+          <div class="mi dim">📊 Dashboard</div>
+          <div class="mi dim">📝 Posts</div>
+          <div class="mi dim">🖼 Media</div>
+          <div class="mi active">🔌 WP x MCP</div>
+          <div class="mi dim">⚙️ Settings</div>
+        </nav>
+        <div class="wp-main" id="screen"><!-- injected --></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: state + server log -->
+    <div class="rail">
+      <div class="card">
+        <h3>Live state</h3>
+        <div class="chips">
+          <div class="chip"><div class="k">PIN configured</div><div class="v" id="c-pin">—</div></div>
+          <div class="chip"><div class="k">Screen</div><div class="v" id="c-screen">—</div></div>
+          <div class="chip"><div class="k">Failed tries</div><div class="v" id="c-tries">0 / 5</div></div>
+          <div class="chip"><div class="k">Unlock TTL</div><div class="v" id="c-ttl">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>What the server just did</h3>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="card">
+        <h3>Under the hood</h3>
+        <div class="facts">
+          <div><b>Stored as a hash.</b> The PIN is saved only as <code>password_hash()</code> and checked with <code>password_verify()</code> — never in plaintext.</div>
+          <div><b>Per-user unlock.</b> A 15-minute transient marks you unlocked; then it re-locks.</div>
+          <div><b>Brute-force lockout.</b> 5 wrong tries → 10-minute lockout, even for the correct PIN.</div>
+          <div><b>Every form is nonce-checked</b> (<code>check_admin_referer</code>) and needs <code>manage_options</code>.</div>
+          <div><b>Recovery:</b> <code>define('WPXMCP_PIN_RESET', true);</code> in <code>wp-config.php</code>.</div>
+        </div>
+        <div class="bar">
+          <button class="ghost" id="reset">↺ Restart walkthrough</button>
+        </div>
+        <div class="demoflag">Demo note: this page holds the PIN in memory only to drive the click-through. Timers are shown as values (not real 10/15-min waits) with a “simulate” shortcut where relevant.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var S = { pin:null, screen:"setup", tries:0, lockoutUntil:0, unlockedUntil:0, manageOpen:false, notice:null };
+  var MAX=5, MIN=4, MAXLEN=32;
+  var screen=document.getElementById("screen"), logEl=document.getElementById("log");
+
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+  function now(){return Math.floor(Date.now()/1000);} // demo timestamps
+  function unlocked(){return S.unlockedUntil>now();}
+  function lockedOut(){return S.lockoutUntil>now();}
+
+  function log(act, code, kind){
+    var d=document.createElement("div");
+    d.className="logline"+(kind?" "+kind:"");
+    d.innerHTML='<div class="act">'+esc(act)+'</div>'+(code?'<code>'+esc(code)+'</code>':'');
+    logEl.insertBefore(d, logEl.firstChild);
+  }
+
+  function setChips(){
+    var el=function(id){return document.getElementById(id);};
+    el("c-pin").textContent = S.pin? "yes" : "no";
+    el("c-pin").className = "v "+(S.pin?"good":"");
+    var names={setup:"Set PIN",locked:"Locked",lockout:"Lockout",unlocked:"Unlocked"};
+    el("c-screen").textContent = names[S.screen]||S.screen;
+    el("c-screen").className = "v "+(S.screen==="unlocked"?"good":(S.screen==="lockout"?"bad":"warn"));
+    el("c-tries").textContent = S.tries+" / "+MAX;
+    el("c-tries").className = "v "+(S.tries>=MAX?"bad":(S.tries>0?"warn":""));
+    el("c-ttl").textContent = unlocked()? "15:00" : "—";
+    el("c-ttl").className = "v "+(unlocked()?"good":"");
+  }
+
+  function markSteps(){
+    var map={setup:"setup",locked:"locked",lockout:"locked",unlocked:"manage"};
+    var order=["setup","locked","unlock","manage"], cur=map[S.screen];
+    var idx={setup:0,locked:1,unlock:1,manage:3}[S.screen];
+    document.querySelectorAll("#steps .step").forEach(function(st){
+      st.classList.remove("on","done");
+      var s=st.getAttribute("data-s"), oi=order.indexOf(s);
+      if(s===cur) st.classList.add("on");
+      else if(oi<order.indexOf(cur==="setup"?"setup":cur)) st.classList.add("done");
+    });
+    // simpler: mark completed by progress
+    var prog={setup:0,locked:1,lockout:1,unlocked:3}[S.screen];
+    document.querySelectorAll("#steps .step").forEach(function(st,i){
+      st.classList.remove("on","done");
+      if(i<prog) st.classList.add("done");
+      else if(i===prog||(S.screen==="unlocked"&&i===3)) st.classList.add("on");
+    });
+  }
+
+  function noticeHTML(){
+    if(!S.notice) return "";
+    return '<div class="wp-notice '+(S.notice.type==="ok"?"ok":"err")+'">'+esc(S.notice.text)+'</div>';
+  }
+  function flash(text,type){ S.notice={text:text,type:type||"err"}; }
+
+  function render(){
+    var html="";
+    if(!S.pin){ // SETUP
+      S.screen="setup";
+      html=''
+      +'<h2 class="title">WP x MCP — Set a PIN</h2>'
+      + noticeHTML()
+      +'<p>Protect the WP x MCP screens with a PIN. After this, anyone opening these pages — even a logged-in administrator — must enter the PIN first. Choose '+MIN+'–'+MAXLEN+' characters (digits or a passphrase).</p>'
+      +'<div class="wp-field"><label>New PIN</label><input class="wp-input" id="f-pin" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••"></div>'
+      +'<div class="wp-field"><label>Confirm PIN</label><input class="wp-input" id="f-pin2" type="password" inputmode="numeric" autocomplete="new-password" placeholder="••••"></div>'
+      +'<button class="wp-btn" id="do-set">Set PIN &amp; unlock</button>'
+      +'<div class="wp-note">There is no email recovery — store it safely. Forgot it later? Use the <code>WPXMCP_PIN_RESET</code> wp-config option.</div>';
+    } else if(!unlocked()){ // LOCKED or LOCKOUT
+      if(lockedOut()){
+        S.screen="lockout";
+        var mins=Math.ceil((S.lockoutUntil-now())/60);
+        html='<h2 class="title">WP x MCP — Locked</h2>'+noticeHTML()
+        +'<div class="lockwrap"><div class="lock-emoji">⛔</div>'
+        +'<p>Too many incorrect attempts. Try again in about <strong>'+mins+' minute(s)</strong>.</p>'
+        +'<button class="wp-btn sec" id="do-simwait">Simulate the 10-minute wait →</button></div>';
+      } else {
+        S.screen="locked";
+        html='<h2 class="title">WP x MCP — Locked</h2>'+noticeHTML()
+        +'<div class="lockwrap"><div class="lock-emoji">🔒</div>'
+        +'<p>Enter your PIN to open the WP x MCP screens.</p>'
+        +'<div class="wp-field"><input class="wp-input" id="f-unlock" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" autofocus></div>'
+        +'<button class="wp-btn" id="do-unlock">Unlock</button>'
+        +'<div class="wp-note">Forgot it? Add <code>define(\'WPXMCP_PIN_RESET\', true);</code> to wp-config.php, reload once, then set a new PIN.</div></div>';
+      }
+    } else { // UNLOCKED — real settings page + status bar
+      S.screen="unlocked";
+      html=''
+      +'<div class="statusbar"><span style="font-weight:600">🔒 PIN protection is on.</span>'
+      +'<span class="grow">Auto-locks 15 min after unlock.</span>'
+      +'<button class="wp-btn sm" id="do-lock">Lock now</button>'
+      +'<button class="wp-btn sm sec" id="do-managetoggle">Change / Remove PIN</button></div>'
+      + noticeHTML()
+      +'<div class="manage'+(S.manageOpen?" open":"")+'" id="managepanel">'
+        +'<form id="form-change"><h3>Change PIN</h3>'
+          +'<input class="wp-input" id="ch-cur" type="password" placeholder="Current PIN" autocomplete="off">'
+          +'<input class="wp-input" id="ch-new" type="password" placeholder="New PIN" autocomplete="new-password">'
+          +'<input class="wp-input" id="ch-new2" type="password" placeholder="Confirm new PIN" autocomplete="new-password">'
+          +'<button class="wp-btn" id="do-change" type="button">Change PIN</button></form>'
+        +'<form id="form-remove"><h3>Remove PIN</h3>'
+          +'<p class="dim">Turns PIN protection off. Screens open with only the normal WordPress login.</p>'
+          +'<input class="wp-input" id="rm-cur" type="password" placeholder="Current PIN" autocomplete="off">'
+          +'<button class="wp-btn danger" id="do-remove" type="button">Remove PIN</button></form>'
+      +'</div>'
+      +'<h2 class="title">WP x MCP — Full Control AI Connector</h2>'
+      +'<p>Self-owned MCP server. Connect Claude, ChatGPT, or Gemini using the endpoint and an API key below.</p>'
+      +'<table class="keytable"><thead><tr><th>Label</th><th>Key</th><th>Scope</th></tr></thead>'
+      +'<tbody><tr><td>Default key</td><td><code>wpxmcp_9f2c…a41d</code></td><td>full</td></tr></tbody></table>'
+      +'<div class="wp-note">✅ You’re past the gate — this is the real settings/keys/log screen. It stays open for 15 minutes, then the PIN is asked again.</div>';
+    }
+    screen.innerHTML=html;
+    wire();
+    setChips(); markSteps();
+    S.notice=null; // one-shot, like the server transient flash
+  }
+
+  function wire(){
+    var g=function(id){return document.getElementById(id);};
+    if(g("do-set")) g("do-set").onclick=function(){
+      var p=g("f-pin").value, p2=g("f-pin2").value;
+      if(p.length<MIN||p.length>MAXLEN){ flash("PIN must be "+MIN+" to "+MAXLEN+" characters.","err"); log("Rejected: length","validate_pin() → error",'err'); return render(); }
+      if(p!==p2){ flash("The two PIN entries do not match.","err"); log("Rejected: mismatch","validate_pin() → error",'err'); return render(); }
+      S.pin=p; S.unlockedUntil=now()+900; S.tries=0; S.lockoutUntil=0;
+      flash("PIN set. The WP x MCP screens are now PIN-protected.","ok");
+      log("PIN set + unlocked","update_option('wpxmcp_pin_hash', password_hash($pin)); set_transient('wpxmcp_pin_ok_7','1',900)",'ok');
+      render();
+    };
+    if(g("do-unlock")) g("do-unlock").onclick=function(){
+      var p=g("f-unlock").value;
+      if(p===S.pin){
+        S.unlockedUntil=now()+900; S.tries=0; S.lockoutUntil=0;
+        log("Correct PIN → unlocked","password_verify($pin,$hash) === true; set_transient('wpxmcp_pin_ok_7','1',900)",'ok');
+        render();
+      } else {
+        S.tries++;
+        if(S.tries>=MAX){ S.lockoutUntil=now()+600;
+          flash("Too many wrong PINs. Try again in 10 min.","err");
+          log("5th wrong PIN → LOCKOUT","set_transient('wpxmcp_pin_lock_7', time()+600, 600)",'err');
+        } else {
+          flash("Wrong PIN. "+(MAX-S.tries)+" attempt(s) left.","err");
+          log("Wrong PIN ("+S.tries+"/"+MAX+")","password_verify()===false; set_transient('wpxmcp_pin_try_7',"+S.tries+",600)",'warn');
+        }
+        render();
+      }
+    };
+    if(g("do-simwait")) g("do-simwait").onclick=function(){ S.lockoutUntil=0; S.tries=0; log("Lockout window elapsed","transient 'wpxmcp_pin_lock_7' expired",'ok'); render(); };
+    if(g("do-lock")) g("do-lock").onclick=function(){ S.unlockedUntil=0; S.manageOpen=false; log("Locked manually","delete_transient('wpxmcp_pin_ok_7')",'ok'); render(); };
+    if(g("do-managetoggle")) g("do-managetoggle").onclick=function(){ S.manageOpen=!S.manageOpen; render(); };
+    if(g("do-change")) g("do-change").onclick=function(){
+      var cur=g("ch-cur").value, nw=g("ch-new").value, nw2=g("ch-new2").value;
+      if(cur!==S.pin){ flash("Current PIN is wrong.","err"); log("Change denied","password_verify(current)===false",'err'); S.manageOpen=true; return render(); }
+      if(nw.length<MIN||nw.length>MAXLEN){ flash("PIN must be "+MIN+" to "+MAXLEN+" characters.","err"); S.manageOpen=true; return render(); }
+      if(nw!==nw2){ flash("The two PIN entries do not match.","err"); S.manageOpen=true; return render(); }
+      S.pin=nw; S.unlockedUntil=now()+900; S.manageOpen=false;
+      flash("PIN changed.","ok");
+      log("PIN changed","password_verify(current)===true; update_option('wpxmcp_pin_hash', password_hash($new))",'ok');
+      render();
+    };
+    if(g("do-remove")) g("do-remove").onclick=function(){
+      var cur=g("rm-cur").value;
+      if(cur!==S.pin){ flash("Current PIN is wrong.","err"); log("Remove denied","password_verify(current)===false",'err'); S.manageOpen=true; return render(); }
+      S.pin=null; S.unlockedUntil=0; S.manageOpen=false; S.tries=0;
+      flash("PIN removed. The screens are no longer PIN-protected.","ok");
+      log("PIN removed","delete_option('wpxmcp_pin_hash')",'ok');
+      render();
+    };
+  }
+
+  document.getElementById("reset").onclick=function(){
+    S={pin:null,screen:"setup",tries:0,lockoutUntil:0,unlockedUntil:0,manageOpen:false,notice:null};
+    logEl.innerHTML=""; log("Fresh install","No wpxmcp_pin_hash option yet → gate shows the ‘Set a PIN’ screen",'ok'); render();
+  };
+
+  log("Fresh install","No wpxmcp_pin_hash option yet → gate shows the ‘Set a PIN’ screen",'ok');
+  render();
+})();
+</script>
