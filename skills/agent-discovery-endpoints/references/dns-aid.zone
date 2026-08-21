@@ -1,0 +1,27 @@
+; DNS for AI Discovery (DNS-AID) records.
+; Publish ServiceMode SVCB/HTTPS records under _agents.<domain> and sign the
+; zone with DNSSEC so validating resolvers return authenticated answers.
+; Spec: draft-mozleywilliams-dnsop-dnsaid, RFC 9460 (SVCB/HTTPS).
+
+$ORIGIN example.com.
+$TTL 3600
+
+; General discovery index endpoint.
+_index._agents   IN SVCB 1 discovery.example.com. ( alpn="h2,h3"
+                                                     port=443
+                                                     endpoint="/.well-known/api-catalog" )
+
+; Agent-to-agent (A2A) endpoint.
+_a2a._agents     IN SVCB 1 a2a.example.com.        ( alpn="h2"
+                                                     port=443
+                                                     endpoint="/a2a" )
+
+; MCP transport endpoint.
+_mcp._agents     IN SVCB 1 mcp.example.com.        ( alpn="h2"
+                                                     port=443
+                                                     endpoint="/mcp" )
+
+; After editing the zone:
+;   1. Re-sign:   dnssec-signzone -S -K keys -o example.com db.example.com
+;   2. Publish the signed zone and bump the SOA serial.
+;   3. Verify:    dig +dnssec _index._agents.example.com SVCB   (expect the 'ad' flag)

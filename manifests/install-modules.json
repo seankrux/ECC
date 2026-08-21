@@ -133,6 +133,7 @@
       "kind": "skills",
       "description": "Core framework, language, and application-engineering skills.",
       "paths": [
+        "skills/agent-discovery-endpoints",
         "skills/android-clean-architecture",
         "skills/angular-developer",
         "skills/api-design",

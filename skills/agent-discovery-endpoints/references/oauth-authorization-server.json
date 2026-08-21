@@ -1,0 +1,28 @@
+{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/oauth/authorize",
+  "token_endpoint": "https://auth.example.com/oauth/token",
+  "registration_endpoint": "https://auth.example.com/oauth/register",
+  "revocation_endpoint": "https://auth.example.com/oauth/revoke",
+  "grant_types_supported": [
+    "client_credentials",
+    "authorization_code"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "client_secret_basic",
+    "private_key_jwt"
+  ],
+  "agent_auth": {
+    "register_uri": "https://auth.example.com/oauth/register",
+    "identity_types_supported": [
+      "service_account",
+      "delegated_user"
+    ],
+    "credential_types_supported": [
+      "client_secret",
+      "private_key_jwt"
+    ],
+    "claim_uri": "https://auth.example.com/claims",
+    "revocation_uri": "https://auth.example.com/oauth/revoke"
+  }
+}

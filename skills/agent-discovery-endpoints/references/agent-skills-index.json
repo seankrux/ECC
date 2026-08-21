@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agentskills.io/schemas/discovery/v0.2.0/index.json",
+  "skills": [
+    {
+      "name": "example-quote",
+      "type": "text/markdown",
+      "description": "Request a service quote from Example.",
+      "url": "https://example.com/.well-known/agent-skills/example-quote/SKILL.md",
+      "sha256": "REPLACE_WITH_SHA256_OF_SKILL_FILE"
+    }
+  ]
+}
